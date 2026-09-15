@@ -113,7 +113,7 @@ const tui = async (api: any, options?: Options) => {
   api.command?.register(() => [
     {
       title: "Usage limits",
-      description: "OpenCode Go — 5h / weekly / monthly usage",
+      description: "OpenCode Go - 5h / weekly / monthly usage",
       value: "usage-bar.usage",
       category: "Plugin",
       slash: { name: "limit" },

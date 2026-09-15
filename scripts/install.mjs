@@ -15,7 +15,7 @@ const log = (msg) => console.log(`[opencode-usage-bar] ${msg}`)
 const warn = (msg) => console.warn(`[opencode-usage-bar] ${msg}`)
 
 if (!existsSync(path.join(distDir, "tui.tsx"))) {
-  warn("dist/tui.tsx not found — run `npm run build` first")
+  warn("dist/tui.tsx not found - run `npm run build` first")
   process.exit(1)
 }
 
@@ -93,7 +93,7 @@ let config
 try {
   config = JSON.parse(readFileSync(tuiPath, "utf8").replace(/^\uFEFF/, ""))
 } catch {
-  warn(`could not parse ${tuiPath} (comments or invalid JSON) — add the plugin entry manually:`)
+  warn(`could not parse ${tuiPath} (comments or invalid JSON) - add the plugin entry manually:`)
   warn(`  "plugin": [ ${JSON.stringify(targetDir)} ]`)
   process.exit(0)
 }
@@ -116,4 +116,4 @@ config.plugin = next
 mkdirSync(configDir, { recursive: true })
 writeFileSync(tuiPath, JSON.stringify(config, null, 2) + EOL)
 log(`${replaced ? "updated" : "added"} entry in ${tuiPath}`)
-log("done — quit and restart opencode to load the plugin")
+log("done - quit and restart opencode to load the plugin")

@@ -2,7 +2,7 @@
 
 [OpenCode Go](https://opencode.ai/docs/go/) subscription usage bars for the [opencode](https://opencode.ai) TUI.
 
-Shows how much of your Go plan quota you've used and how long until it resets — a persistent bar next to the prompt in sessions, and a `/limit` popup with all three windows. No LLM prompts are ever sent; the plugin talks directly to the official usage API.
+Shows how much of your Go plan quota you've used and how long until it resets - a persistent bar next to the prompt in sessions, and a `/limit` popup with all three windows. No LLM prompts are ever sent; the plugin talks directly to the official usage API.
 
 ```
 Build · GLM-5.3-Flash OpenCode Go · high          5h ▓▓░░░░░░░░░░░░░░░░░░ 11.0% (resets 4h 10m)
@@ -21,14 +21,14 @@ A full usage bar rendered on the right side of the prompt hint row (the same row
 
 - Percent **used**, one decimal (`xx.x%`), 20-character `▓/░` bar, reset countdown (`4h 10m`, `3d 4h`, …)
 - Refreshes automatically every **60 seconds** (with in-flight request deduplication and a 60s response cache)
-- **Adaptive sizing** — mirrors opencode's own session layout (sidebar width, prompt padding) and
+- **Adaptive sizing** - mirrors opencode's own session layout (sidebar width, prompt padding) and
   terminal size, re-evaluated live on window resize:
   | Space available | Display |
   |---|---|
   | Plenty | full bar + percent + reset timer (44 chars) |
   | Tight | compact form `5h ▓▓░░░░░░ 11.0%` (no timer) |
-  | Not enough | hidden — it never wraps or overlaps the prompt hints |
-- Not shown on the home screen or fresh-session screen — only once you are inside a session
+  | Not enough | hidden - it never wraps or overlaps the prompt hints |
+- Not shown on the home screen or fresh-session screen - only once you are inside a session
 - If the usage request fails, shows a dimmed `5h (unavailable)` instead of silently disappearing
 
 ### `/limit` command
@@ -50,7 +50,7 @@ esc close · refreshes every 60s
 
 - Fetches **fresh** data every time it opens (bypasses the 60s cache)
 - Reset timers keep ticking while the popup is open (30s tick)
-- Floating panel with no background dimming — the session stays visible behind it
+- Floating panel with no background dimming - the session stays visible behind it
 - Close with `esc` or a mouse click outside the panel; prompt focus is restored
 
 ### Data source
@@ -63,7 +63,7 @@ Authorization: Bearer <opencode-go key>
 ```
 
 returning the rolling (5h), weekly, and monthly windows with percent used and reset times.
-The plugin is read-only — it never sends prompts, session data, or anything else to the LLM.
+The plugin is read-only - it never sends prompts, session data, or anything else to the LLM.
 
 ## Install
 
@@ -82,10 +82,10 @@ Works on Windows, macOS, and Linux. The package's postinstall script:
    (working around the npm-spec TUI loading bug below),
 2. vendors the runtime dependencies (`solid-js`, `@opentui/solid`) next to that copy,
    so no network access is needed afterwards,
-3. patches `~/.config/opencode/tui.json` (or `tui.jsonc`) with the absolute plugin path —
+3. patches `~/.config/opencode/tui.json` (or `tui.jsonc`) with the absolute plugin path -
    replacing any previous `usage-bar` entry, preserving other plugins.
 
-Then quit and restart opencode — TUI config is only read at startup.
+Then quit and restart opencode - TUI config is only read at startup.
 
 > npm 11+ gates install scripts by default. If the postinstall was skipped
 > ("install scripts not yet covered by allowScripts"), either run
@@ -105,7 +105,7 @@ To uninstall, remove the entry from `~/.config/opencode/tui.json` and delete
 
 > Note: TUI plugins referenced by npm package spec in `tui.json` currently fail to render
 > in opencode 1.17+ (upstream issue
-> [#33884](https://github.com/anomalyco/opencode/issues/33884)) — that is why this package
+> [#33884](https://github.com/anomalyco/opencode/issues/33884)) - that is why this package
 > installs a file-path copy instead of using `"plugin": ["opencode-usage-bar"]` directly.
 
 ### From a local checkout
@@ -119,7 +119,7 @@ Add the absolute path to the plugin folder in `~/.config/opencode/tui.json`:
 }
 ```
 
-Then quit and restart opencode — TUI config is only read at startup.
+Then quit and restart opencode - TUI config is only read at startup.
 
 ## Options
 
@@ -142,7 +142,7 @@ Options are passed as the second element of the plugin tuple in `tui.json`:
 ## Behavior without a key
 
 If no OpenCode Go key is found (no `OPENCODE_GO_API_KEY`, no `opencode-go` entry in opencode's
-auth store), the plugin does not start — no bar, no command, nothing registered.
+auth store), the plugin does not start - no bar, no command, nothing registered.
 
 ## Requirements
 
