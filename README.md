@@ -87,16 +87,43 @@ Then quit and restart opencode — TUI config is only read at startup.
 > 1.17+ (upstream issue [#33884](https://github.com/anomalyco/opencode/issues/33884)),
 > so use a local path or `file://` URL for now.
 
-### From npm (once published)
+### Install globally (recommended)
 
-```json
-{
-  "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["opencode-usage-bar"]
-}
+```sh
+npm install -g opencode-usage-bar
 ```
 
-Build the `dist/` entry first: `npm run build` (copies `src/` → `dist/`; the TUI loads `dist/tui.tsx`).
+Works on Windows, macOS, and Linux. The package's postinstall script:
+
+1. copies the plugin outside `node_modules` to `~/.config/opencode/usage-bar/`
+   (working around the npm-spec TUI loading bug below),
+2. vendors the runtime dependencies (`solid-js`, `@opentui/solid`) next to that copy,
+   so no network access is needed afterwards,
+3. patches `~/.config/opencode/tui.json` (or `tui.jsonc`) with the absolute plugin path —
+   replacing any previous `usage-bar` entry, preserving other plugins.
+
+Then quit and restart opencode — TUI config is only read at startup.
+
+> npm 11+ gates install scripts by default. If the postinstall was skipped
+> ("install scripts not yet covered by allowScripts"), either run
+> `npm install -g opencode-usage-bar --allow-scripts=opencode-usage-bar`
+> once, or run the bin manually (see below).
+
+To re-run the installer manually (e.g. after `--ignore-scripts` installs, or under pnpm's
+build-script prompt):
+
+```sh
+opencode-usage-bar        # bin installed by the package
+# or: npx opencode-usage-bar
+```
+
+To uninstall, remove the entry from `~/.config/opencode/tui.json` and delete
+`~/.config/opencode/usage-bar/`.
+
+> Note: TUI plugins referenced by npm package spec in `tui.json` currently fail to render
+> in opencode 1.17+ (upstream issue
+> [#33884](https://github.com/anomalyco/opencode/issues/33884)) — that is why this package
+> installs a file-path copy instead of using `"plugin": ["opencode-usage-bar"]` directly.
 
 ## Options
 

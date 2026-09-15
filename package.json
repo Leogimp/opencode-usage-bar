@@ -9,10 +9,16 @@
   },
   "files": [
     "dist",
+    "scripts",
     "README.md"
   ],
+  "bin": {
+    "opencode-usage-bar": "scripts/install.mjs"
+  },
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "install-plugin": "node scripts/install.mjs",
+    "postinstall": "node scripts/install.mjs"
   },
   "dependencies": {
     "@opentui/solid": "0.4.5",
