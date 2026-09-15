@@ -116,7 +116,7 @@ const tui = async (api: any, options?: Options) => {
       description: "OpenCode Go — 5h / weekly / monthly usage",
       value: "usage-bar.usage",
       category: "Plugin",
-      slash: { name: "usage" },
+      slash: { name: "limit" },
       onSelect() {
         openUsage(api)
       },
