@@ -1,0 +1,29 @@
+{
+  "name": "opencode-usage-bar",
+  "version": "0.1.0",
+  "description": "OpenCode Go subscription usage bars for the opencode TUI — 5h/weekly/monthly windows, /usage popup",
+  "type": "module",
+  "main": "dist/tui.tsx",
+  "exports": {
+    "./tui": "./dist/tui.tsx"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@opentui/solid": "0.4.5",
+    "solid-js": "1.9.10"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-go",
+    "usage",
+    "tui",
+    "plugin"
+  ],
+  "license": "MIT"
+}
