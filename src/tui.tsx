@@ -1,7 +1,8 @@
 /** @jsxImportSource @opentui/solid */
-import { createSignal } from "solid-js"
+import { createMemo, createSignal, Show } from "solid-js"
+import { useTerminalDimensions } from "@opentui/solid"
 import { findApiKey, getUsage, type GoUsage } from "./usage"
-import { renderBar } from "./bar"
+import { renderBar, renderCompactBar } from "./bar"
 
 const PLUGIN_ID = "opencode-usage-bar"
 const POLL_MS = 60_000
@@ -25,16 +26,47 @@ async function poll(): Promise<void> {
   }
 }
 
-function BarText(api: any) {
-  const rolling = usage()?.rolling
-  if (failed() && !rolling) {
-    return <text fg={api.theme.current.warning}>5h (unavailable)</text>
-  }
-  if (!rolling) return null
-  return <text fg={api.theme.current.text}>{renderBar(rolling.label, rolling.percentUsed, rolling.resetsAtMs)}</text>
+type Options = {
+  left_reserve?: number
+  sidebar_width?: number
+  padding?: number
 }
 
-const tui = async (api: any) => {
+const SIDEBAR_WIDE_MIN = 120
+
+function Sidebar(props: { api: any; opts: Options }) {
+  const dims = useTerminalDimensions()
+  const line = createMemo<string | null>(() => {
+    const rolling = usage()?.rolling
+    const termWidth = dims().width
+    const opts = props.opts
+    const sidebarWidth = opts.sidebar_width ?? 42
+    const sidebarMode = (props.api.tuiConfig?.sidebar ?? "auto") as string | boolean
+    const sidebarVisible =
+      sidebarWidth > 0 &&
+      (sidebarMode === true || (sidebarMode !== false && termWidth > SIDEBAR_WIDE_MIN))
+    const padding = opts.padding ?? 6
+    const avail = termWidth - (sidebarVisible ? sidebarWidth : 0) - 4 - padding
+    const free = avail - (opts.left_reserve ?? 44)
+    if (!rolling) {
+      if (!failed()) return null
+      const fallback = "5h (unavailable)"
+      return fallback.length <= free ? fallback : null
+    }
+    const full = renderBar(rolling.label, rolling.percentUsed, rolling.resetsAtMs)
+    if (full.length <= free) return full
+    const compact = renderCompactBar(rolling.label, rolling.percentUsed)
+    if (compact.length <= free) return compact
+    return null
+  })
+  return (
+    <Show when={line()}>
+      {(text) => <text fg={props.api.theme.current.text}>{text()}</text>}
+    </Show>
+  )
+}
+
+const tui = async (api: any, options?: Options) => {
   apiKey = await findApiKey()
   if (!apiKey) return
 
@@ -42,11 +74,12 @@ const tui = async (api: any) => {
   api.lifecycle.onDispose(() => clearInterval(timer))
   poll()
 
+  const opts: Options = options ?? {}
   api.slots.register({
     order: 100,
     slots: {
       session_prompt_right() {
-        return BarText(api)
+        return <Sidebar api={api} opts={opts} />
       },
     },
   })
