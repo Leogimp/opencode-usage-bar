@@ -90,7 +90,7 @@ Then quit and restart opencode — TUI config is only read at startup.
 ### Install globally (recommended)
 
 ```sh
-npm install -g opencode-usage-bar
+npm install -g @leogimp/opencode-usage-bar
 ```
 
 Works on Windows, macOS, and Linux. The package's postinstall script:
@@ -106,7 +106,7 @@ Then quit and restart opencode — TUI config is only read at startup.
 
 > npm 11+ gates install scripts by default. If the postinstall was skipped
 > ("install scripts not yet covered by allowScripts"), either run
-> `npm install -g opencode-usage-bar --allow-scripts=opencode-usage-bar`
+> `npm install -g @leogimp/opencode-usage-bar --allow-scripts=@leogimp/opencode-usage-bar`
 > once, or run the bin manually (see below).
 
 To re-run the installer manually (e.g. after `--ignore-scripts` installs, or under pnpm's
@@ -114,7 +114,7 @@ build-script prompt):
 
 ```sh
 opencode-usage-bar        # bin installed by the package
-# or: npx opencode-usage-bar
+# or: npx @leogimp/opencode-usage-bar
 ```
 
 To uninstall, remove the entry from `~/.config/opencode/tui.json` and delete

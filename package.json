@@ -1,5 +1,5 @@
 {
-  "name": "opencode-usage-bar",
+  "name": "@leogimp/opencode-usage-bar",
   "version": "0.1.0",
   "description": "OpenCode Go subscription usage bars for the opencode TUI — 5h/weekly/monthly windows, /usage popup",
   "type": "module",
@@ -31,5 +31,16 @@
     "tui",
     "plugin"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Leogimp/opencode-usage-bar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Leogimp/opencode-usage-bar/issues"
+  },
+  "homepage": "https://github.com/Leogimp/opencode-usage-bar#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }
