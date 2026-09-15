@@ -37,8 +37,12 @@ export function renderWindowBar(win: GoWindow, width: number = 20, now: number =
 }
 
 export function renderCompactBar(label: string, percentUsed: number, width: number = 8): string {
+  return `${label} ${barOnly(percentUsed, width)}`
+}
+
+export function barOnly(percentUsed: number, width: number = 24): string {
   const clamped = Math.max(0, Math.min(100, percentUsed))
   const filled = Math.round((clamped / 100) * width)
   const bar = "\u2593".repeat(filled) + "\u2591".repeat(width - filled)
-  return `${label} ${bar} ${formatPercent(clamped)}`
+  return `${bar} ${formatPercent(clamped)}`
 }
