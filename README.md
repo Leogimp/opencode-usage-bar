@@ -70,24 +70,7 @@ The plugin is read-only — it never sends prompts, session data, or anything el
 The plugin needs an OpenCode Go subscription key connected in opencode
 (`/connect` → opencode-go, or set `OPENCODE_GO_API_KEY`).
 
-### From a local checkout
-
-Add the absolute path to the plugin folder in `~/.config/opencode/tui.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/tui.json",
-  "plugin": ["C:\\path\\to\\opencode-usage-bar"]
-}
-```
-
-Then quit and restart opencode — TUI config is only read at startup.
-
-> Note: TUI plugins referenced by npm package spec currently fail to render in opencode
-> 1.17+ (upstream issue [#33884](https://github.com/anomalyco/opencode/issues/33884)),
-> so use a local path or `file://` URL for now.
-
-### Install globally (recommended)
+### npm (recommended)
 
 ```sh
 npm install -g @leogimp/opencode-usage-bar
@@ -124,6 +107,19 @@ To uninstall, remove the entry from `~/.config/opencode/tui.json` and delete
 > in opencode 1.17+ (upstream issue
 > [#33884](https://github.com/anomalyco/opencode/issues/33884)) — that is why this package
 > installs a file-path copy instead of using `"plugin": ["opencode-usage-bar"]` directly.
+
+### From a local checkout
+
+Add the absolute path to the plugin folder in `~/.config/opencode/tui.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": ["C:\\path\\to\\opencode-usage-bar"]
+}
+```
+
+Then quit and restart opencode — TUI config is only read at startup.
 
 ## Options
 
