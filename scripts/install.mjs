@@ -23,7 +23,7 @@ if (!existsSync(path.join(distDir, "tui.tsx"))) {
 //    see https://github.com/anomalyco/opencode/issues/33884)
 mkdirSync(path.join(targetDir, "dist"), { recursive: true })
 cpSync(distDir, path.join(targetDir, "dist"), { recursive: true, dereference: true })
-for (const name of ["README.md", "LICENSE"]) {
+for (const name of ["package.json", "README.md", "LICENSE"]) {
   const src = path.join(pkgRoot, name)
   if (existsSync(src)) cpSync(src, path.join(targetDir, name))
 }
@@ -52,10 +52,16 @@ const resolveDepDir = (fromDir, name) => {
   const parts = name.split("/")
   let dir = fromDir
   while (true) {
-    const candidate = path.join(dir, "node_modules", ...parts)
-    if (existsSync(candidate)) return candidate
-    if (dir === srcNodeModules || path.dirname(dir) === dir) return undefined
-    dir = path.dirname(dir)
+    if (path.basename(dir) !== "node_modules") {
+      const candidate = path.join(dir, "node_modules", ...parts)
+      if (existsSync(candidate)) return candidate
+    } else {
+      const candidate = path.join(dir, ...parts)
+      if (existsSync(candidate)) return candidate
+    }
+    const parent = path.dirname(dir)
+    if (parent === dir || !(parent === pkgRoot || parent.startsWith(pkgRoot + path.sep))) return undefined
+    dir = parent
   }
 }
 while (queue.length > 0) {
