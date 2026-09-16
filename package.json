@@ -1,5 +1,5 @@
 {
-  "name": "@leogimp/opencode-usage-bar",
+  "name": "@leo.gimp/opencode-usage-bar",
   "version": "0.1.0",
   "description": "OpenCode Go subscription usage bars for the opencode TUI - 5h/weekly/monthly windows, /usage popup",
   "type": "module",
