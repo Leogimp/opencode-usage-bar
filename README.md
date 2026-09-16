@@ -18,28 +18,50 @@ To uninstall, remove the entry from `tui.json` and delete `~/.config/opencode/us
 
 ### Session usage bar
 
-A full usage bar rendered on the right side of the prompt hint row, inside active sessions:
+A full usage bar rendered on the right side of the prompt hint row (the same row as
+`agent · model · provider · effort`), inside active sessions:
 
-- Percent used (`xx.x%`), 20-character `▓/░` bar, reset countdown (`4h 10m`, `3d 4h`, …)
-- Refreshes every **60 seconds** (with request deduplication and a 60s cache)
-- **Adaptive sizing** - mirrors the session layout (sidebar, padding) and terminal size, live on resize; compact form in tight windows, hidden when it would overlap the prompt hints
-- Shows a dimmed `5h (unavailable)` if the request fails instead of disappearing
+- Percent used, one decimal (`xx.x%`), 20-character `▓/░` bar, reset countdown (`4h 10m`, `3d 4h`, …)
+- Refreshes automatically every **60 seconds** (with in-flight request deduplication and a 60s response cache)
+- **Adaptive sizing** - mirrors opencode's own session layout (sidebar width, prompt padding)
+  and terminal size, re-evaluated live on window resize:
+
+  | Space available | Display |
+  |---|---|
+  | Plenty | full bar + percent + reset timer |
+  | Tight | compact form `5h ▓▓░░░░░░ 11.0%` (no timer) |
+  | Not enough | hidden - it never wraps or overlaps the prompt hints |
+
+- Only shown once you are inside a session, not on the home or fresh-session screen
+- Shows a dimmed `5h (unavailable)` if the request fails instead of silently disappearing
 
 ![session usage bar](assets/session-bar.png)
 
 ### `/limit` popup
 
-Type `/limit` (or `ctrl+p` → *Usage limits*) for a popup with all three windows - rolling 5h, weekly, monthly:
+Type `/limit` (or `ctrl+p` → *Usage limits*) for a popup with all three OpenCode Go windows -
+rolling 5h, weekly, and monthly - each with a bar, percent used, and reset timer:
 
-- Fetches **fresh** data on every open (bypasses the cache); timers keep ticking while open
-- Floating panel, no background dimming - close with `esc` or a click outside
-- `[ hide usage bar ]` toggle below the windows, persisted across restarts in `~/.config/opencode/usage-bar.json`
+- Fetches **fresh** data every time it opens (bypasses the 60s cache)
+- Reset timers keep ticking while the popup is open (30s tick)
+- Floating panel with no background dimming - the session stays visible behind it; close with
+  `esc` or a click outside, prompt focus is restored
+- `[ hide usage bar ]` toggle below the windows - hides or shows the session prompt bar,
+  persisted across restarts in `~/.config/opencode/usage-bar.json`
 
 ![/limit popup](assets/limit-popup.png)
 
 ### Data source
 
-Reads the official OpenCode Go quota endpoint (`GET https://opencode.ai/zen/go/v1/usage`) returning the rolling, weekly, and monthly windows. The plugin is read-only.
+Reads the official OpenCode Go quota endpoint:
+
+```
+GET https://opencode.ai/zen/go/v1/usage
+Authorization: Bearer <opencode-go key>
+```
+
+returning the rolling (5h), weekly, and monthly windows with percent used and reset times.
+The plugin is read-only - it never sends prompts, session data, or anything else to the LLM.
 
 ## Options
 
