@@ -9,11 +9,20 @@ const LABEL_WIDTH = 9
 const PANEL_WIDTH = 60
 const TICK_MS = 30_000
 
-export function UsagePanel(props: { api: any; apiKey: string }) {
+export function UsagePanel(props: {
+  api: any
+  apiKey: string
+  hidden: () => boolean
+  onToggle: () => void
+}) {
   const theme = props.api.theme.current
   const [usage, setUsage] = createSignal<GoUsage | null>(null)
   const [failed, setFailed] = createSignal<string | null>(null)
   const [tick, setTick] = createSignal(0)
+  const toggleHidden = (e: any) => {
+    e.stopPropagation()
+    props.onToggle()
+  }
   const tickTimer = setInterval(() => setTick((t) => t + 1), TICK_MS)
   onCleanup(() => clearInterval(tickTimer))
 
@@ -61,6 +70,9 @@ export function UsagePanel(props: { api: any; apiKey: string }) {
           }}
         </For>
       </box>
+      <box paddingTop={1} flexDirection="row" onMouseUp={toggleHidden}>
+        <text fg={theme.textMuted}>{`[ ${props.hidden() ? "show" : "hide"} usage bar ]`}</text>
+      </box>
       <box paddingTop={1}>
         <text fg={theme.textMuted}>esc close · refreshes every 60s</text>
       </box>
@@ -73,6 +85,8 @@ export function UsageOverlay(props: {
   apiKey: string
   open: () => boolean
   onClose: () => void
+  hidden: () => boolean
+  onToggle: () => void
 }) {
   const dims = useTerminalDimensions()
   return (
@@ -95,7 +109,7 @@ export function UsageOverlay(props: {
           paddingTop={1}
           onMouseUp={(e: any) => e.stopPropagation()}
         >
-          <UsagePanel api={props.api} apiKey={props.apiKey} />
+          <UsagePanel api={props.api} apiKey={props.apiKey} hidden={props.hidden} onToggle={props.onToggle} />
         </box>
       </box>
     </Show>

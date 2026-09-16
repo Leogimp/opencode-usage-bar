@@ -45,6 +45,8 @@ weekly   ▓▓░░░░░░░░░░░░░░░░░░░░░�
 
 monthly  ▓▓░░░░░░░░░░░░░░░░░░░░░░ 4.0%   resets 27d 13h
 
+[ hide usage bar ]
+
 esc close · refreshes every 60s
 ```
 
@@ -52,6 +54,8 @@ esc close · refreshes every 60s
 - Reset timers keep ticking while the popup is open (30s tick)
 - Floating panel with no background dimming - the session stays visible behind it
 - Close with `esc` or a mouse click outside the panel; prompt focus is restored
+- `[ hide usage bar ]` toggle below the windows - hides or shows the session prompt bar,
+  persisted across restarts in `~/.config/opencode/usage-bar.json`
 
 ### Data source
 

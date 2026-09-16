@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { createMemo, createSignal, Show } from "solid-js"
 import { useTerminalDimensions } from "@opentui/solid"
-import { findApiKey, getUsage, type GoUsage } from "./usage"
+import { findApiKey, getUsage, loadHiddenPref, saveHiddenPref, type GoUsage } from "./usage"
 import { renderBar, renderCompactBar } from "./bar"
 import { UsageOverlay } from "./dialog"
 
@@ -11,6 +11,7 @@ const POLL_MS = 60_000
 const [usage, setUsage] = createSignal<GoUsage | null>(null)
 const [failed, setFailed] = createSignal(false)
 const [overlayOpen, setOverlayOpen] = createSignal(false)
+const [barHidden, setBarHidden] = createSignal(loadHiddenPref())
 let apiKey: string | null = null
 let polling = false
 let savedFocus: any = null
@@ -54,6 +55,7 @@ function closeUsage(): void {
 function Sidebar(props: { api: any; opts: Options }) {
   const dims = useTerminalDimensions()
   const line = createMemo<string | null>(() => {
+    if (barHidden()) return null
     const rolling = usage()?.rolling
     const termWidth = dims().width
     const opts = props.opts
@@ -105,7 +107,20 @@ const tui = async (api: any, options?: Options) => {
         return <Sidebar api={api} opts={options ?? {}} />
       },
       app() {
-        return <UsageOverlay api={api} apiKey={apiKey!} open={overlayOpen} onClose={closeUsage} />
+        return (
+          <UsageOverlay
+            api={api}
+            apiKey={apiKey!}
+            open={overlayOpen}
+            onClose={closeUsage}
+            hidden={barHidden}
+            onToggle={() => {
+              const next = !barHidden()
+              setBarHidden(next)
+              saveHiddenPref(next)
+            }}
+          />
+        )
       },
     },
   })
