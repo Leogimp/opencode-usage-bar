@@ -13,7 +13,7 @@
 <br />
 
 <img src="https://img.shields.io/npm/v/@leo.gimp/opencode-usage-bar?style=for-the-badge&label=Version&logo=npm&logoColor=white&color=000000" alt="Version" />
-<img src="https://img.shields.io/badge/opencode-2.x-000000?style=for-the-badge&logo=opencode&logoColor=white" alt="opencode 2.x" />
+<img src="https://img.shields.io/badge/opencode-v2-000000?style=for-the-badge&logo=opencode&logoColor=white" alt="opencode v2" />
 <img src="https://img.shields.io/badge/License-MIT-000000?style=for-the-badge&logo=open-source-initiative&logoColor=white" alt="MIT License" />
 
 <br />
@@ -122,7 +122,8 @@ Add the absolute path to the plugin folder under `plugins` in `~/.config/opencod
 
 ## Requirements
 
-- opencode **2.x** (uses the V2 CLI plugin slot API, `@opencode/plugin/tui`)
+- opencode **v2** (uses the V2 CLI plugin slot API, `@opencode/plugin/tui`)
+- For opencode **1.x**, visit the [`OpenCode-v1` branch](https://github.com/Leogimp/opencode-usage-bar/tree/OpenCode-v1) - the last version built for the V1 TUI plugin API
 - An OpenCode Go subscription
 
 ## License
