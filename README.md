@@ -22,6 +22,9 @@
 
 </div>
 
+> [!IMPORTANT]
+> For opencode **1.x**, visit the [`OpenCode-v1` branch](https://github.com/Leogimp/opencode-usage-bar/tree/OpenCode-v1) - the last version built for the V1 TUI plugin API.
+
 ## Install
 
 ```sh
@@ -123,7 +126,6 @@ Add the absolute path to the plugin folder under `plugins` in `~/.config/opencod
 ## Requirements
 
 - opencode **v2** (uses the V2 CLI plugin slot API, `@opencode/plugin/tui`)
-- For opencode **1.x**, visit the [`OpenCode-v1` branch](https://github.com/Leogimp/opencode-usage-bar/tree/OpenCode-v1) - the last version built for the V1 TUI plugin API
 - An OpenCode Go subscription
 
 ## License
