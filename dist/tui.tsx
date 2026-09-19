@@ -1,34 +1,17 @@
 /** @jsxImportSource @opentui/solid */
+import { existsSync, readFileSync, unlinkSync } from "node:fs"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import { createMemo, createSignal, Show } from "solid-js"
 import { useTerminalDimensions } from "@opentui/solid"
-import { findApiKey, getUsage, loadHiddenPref, saveHiddenPref, type GoUsage } from "./usage"
+import { Plugin, usePlugin } from "@opencode/plugin/tui"
+import type { Context, SlotMap } from "@opencode/plugin/tui/context"
+import { findApiKey, getUsage, type GoUsage } from "./usage"
 import { renderBar, renderCompactBar } from "./bar"
-import { UsageOverlay } from "./dialog"
+import { UsagePanel } from "./dialog"
 
-const PLUGIN_ID = "opencode-usage-bar"
 const POLL_MS = 60_000
-
-const [usage, setUsage] = createSignal<GoUsage | null>(null)
-const [failed, setFailed] = createSignal(false)
-const [overlayOpen, setOverlayOpen] = createSignal(false)
-const [barHidden, setBarHidden] = createSignal(loadHiddenPref())
-let apiKey: string | null = null
-let polling = false
-let savedFocus: any = null
-
-async function poll(): Promise<void> {
-  if (!apiKey || polling) return
-  polling = true
-  try {
-    const data = await getUsage(apiKey)
-    setUsage(data)
-    setFailed(false)
-  } catch {
-    setFailed(true)
-  } finally {
-    polling = false
-  }
-}
+const SIDEBAR_WIDE_MIN = 120
 
 type Options = {
   left_reserve?: number
@@ -36,38 +19,29 @@ type Options = {
   padding?: number
 }
 
-const SIDEBAR_WIDE_MIN = 120
-
-function openUsage(api: any): void {
-  savedFocus = api.renderer.currentFocusedRenderable ?? null
-  savedFocus?.blur?.()
-  setOverlayOpen(true)
-}
-
-function closeUsage(): void {
-  setOverlayOpen(false)
-  setTimeout(() => {
-    if (savedFocus && !savedFocus.isDestroyed) savedFocus.focus()
-    savedFocus = null
-  }, 1)
-}
-
-function Sidebar(props: { api: any; opts: Options }) {
+function Sidebar(props: {
+  opts: Options
+  hidden: () => boolean
+  usage: () => GoUsage | null
+  failed: () => boolean
+}) {
+  const ctx = usePlugin()
   const dims = useTerminalDimensions()
   const line = createMemo<string | null>(() => {
-    if (barHidden()) return null
-    const rolling = usage()?.rolling
+    if (props.hidden()) return null
+    const rolling = props.usage()?.rolling
     const termWidth = dims().width
     const opts = props.opts
     const sidebarWidth = opts.sidebar_width ?? 42
-    const sidebarMode = (props.api.tuiConfig?.sidebar ?? "auto") as string | boolean
+    // V2 has no way to read the host's session.sidebar setting; assume "auto"
+    // and let users who keep the sidebar hidden set sidebar_width: 0.
     const sidebarVisible =
-      sidebarWidth > 0 && (sidebarMode === true || (sidebarMode !== false && termWidth > SIDEBAR_WIDE_MIN))
+      sidebarWidth > 0 && termWidth > SIDEBAR_WIDE_MIN
     const padding = opts.padding ?? 6
     const avail = termWidth - (sidebarVisible ? sidebarWidth : 0) - 4 - padding
     const free = avail - (opts.left_reserve ?? 44)
     if (!rolling) {
-      if (!failed()) return null
+      if (!props.failed()) return null
       const fallback = "5h (unavailable)"
       return fallback.length <= free ? fallback : null
     }
@@ -79,67 +53,111 @@ function Sidebar(props: { api: any; opts: Options }) {
   })
   return (
     <Show when={line()}>
-      {(text) => <text fg={props.api.theme.current.text}>{text()}</text>}
+      {(text) => <text fg={ctx.theme.text.base}>{text()}</text>}
     </Show>
   )
 }
 
-const tui = async (api: any, options?: Options) => {
-  apiKey = await findApiKey()
-  if (!apiKey) return
+/** One-time migration of the pre-V2 hide preference file into plugin storage. */
+function migrateLegacyPref(update: (mutation: (draft: { hideSessionBar: boolean }) => void) => Promise<void>) {
+  try {
+    const path = join(homedir(), ".config", "opencode", "usage-bar.json")
+    if (!existsSync(path)) return
+    const state = JSON.parse(readFileSync(path, "utf8"))
+    if (state?.hideSessionBar === true) void update((draft: { hideSessionBar: boolean }) => { draft.hideSessionBar = true })
+    unlinkSync(path)
+  } catch {}
+}
 
-  const timer = setInterval(poll, POLL_MS)
-  api.lifecycle.onDispose(() => clearInterval(timer))
-  poll()
+export default Plugin.define({
+  id: "opencode-usage-bar",
+  async setup(ctx: Context) {
+    const apiKey = await findApiKey()
+    if (!apiKey) return
 
-  api.keymap.intercept("key", (ctx: any) => {
-    if (!overlayOpen()) return
-    if (ctx.event?.name === "escape") {
-      ctx.consume({ preventDefault: true, stopPropagation: true })
-      closeUsage()
+    const opts = (ctx.options ?? {}) as Options
+    const [settings, updateSettings] = ctx.storage.store("settings", {
+      initial: { hideSessionBar: false },
+    })
+    migrateLegacyPref(updateSettings)
+
+    const [usage, setUsage] = createSignal<GoUsage | null>(null)
+    const [failed, setFailed] = createSignal(false)
+    let polling = false
+
+    async function poll(): Promise<void> {
+      if (polling) return
+      polling = true
+      try {
+        const data = await getUsage(apiKey!)
+        setUsage(data)
+        setFailed(false)
+      } catch {
+        setFailed(true)
+      } finally {
+        polling = false
+      }
     }
-  }, { priority: 1 })
 
-  api.slots.register({
-    order: 100,
-    slots: {
-      session_prompt_right() {
-        return <Sidebar api={api} opts={options ?? {}} />
-      },
-      app() {
-        return (
-          <UsageOverlay
-            api={api}
+    const timer = setInterval(poll, POLL_MS)
+    void poll()
+
+    function openLimits() {
+      ctx.ui.dialog.set({ size: "large", centered: true })
+      ctx.ui.dialog.show(
+        () => (
+          <UsagePanel
             apiKey={apiKey!}
-            open={overlayOpen}
-            onClose={closeUsage}
-            hidden={barHidden}
+            hidden={() => settings.hideSessionBar}
             onToggle={() => {
-              const next = !barHidden()
-              setBarHidden(next)
-              saveHiddenPref(next)
+              void updateSettings((draft) => {
+                draft.hideSessionBar = !draft.hideSessionBar
+              })
             }}
           />
-        )
-      },
-    },
-  })
+        ),
+      )
+    }
 
-  api.command?.register(() => [
-    {
-      title: "Usage limits",
-      description: "OpenCode Go - 5h / weekly / monthly usage",
-      value: "usage-bar.usage",
-      category: "Plugin",
-      slash: { name: "limit" },
-      onSelect() {
-        openUsage(api)
-      },
-    },
-  ])
-}
+    // Session prompt footer: the usage bar next to the prompt hints.
+    ctx.ui.slot({
+      append: "prompt.footer.status",
+      render: (input: SlotMap["prompt.footer.status"]) => (
+        <Show when={input.sessionID}>
+          <Sidebar
+            opts={opts}
+            hidden={() => settings.hideSessionBar}
+            usage={usage}
+            failed={failed}
+          />
+        </Show>
+      ),
+    })
 
-export default {
-  id: PLUGIN_ID,
-  tui,
-}
+    // Global command layer for the /limit popup. Mounted through the app slot
+    // so the layer is owned by a long-lived component.
+    ctx.ui.slot({
+      append: "app",
+      render: () => {
+        ctx.keymap.layer(() => ({
+          mode: "global",
+          priority: 100,
+          commands: [
+            {
+              id: "usage-bar.usage",
+              title: "Usage limits",
+              description: "OpenCode Go - 5h / weekly / monthly usage",
+              group: "Usage",
+              palette: true,
+              slash: { name: "limit" },
+              run: openLimits,
+            },
+          ],
+        }))
+        return null
+      },
+    })
+
+    return () => clearInterval(timer)
+  },
+})

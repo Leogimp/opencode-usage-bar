@@ -1,7 +1,7 @@
 {
   "name": "@leo.gimp/opencode-usage-bar",
-  "version": "0.1.0",
-  "description": "OpenCode Go subscription usage bars for the opencode TUI - 5h/weekly/monthly windows, /usage popup",
+  "version": "0.2.0",
+  "description": "OpenCode Go subscription usage bars for the opencode v2 TUI - 5h/weekly/monthly windows, /limit popup",
   "type": "module",
   "main": "dist/tui.tsx",
   "exports": {
@@ -21,8 +21,14 @@
     "postinstall": "node scripts/install.mjs"
   },
   "dependencies": {
-    "@opentui/solid": "0.4.5",
-    "solid-js": "1.9.10"
+    "@opencode/plugin": "^2.0.10",
+    "@opentui/solid": "^0.5.11",
+    "solid-js": "^1.9.15"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.5.10",
+    "@opentui/solid": ">=0.5.10",
+    "solid-js": ">=1.9.0"
   },
   "keywords": [
     "opencode",

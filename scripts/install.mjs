@@ -89,37 +89,66 @@ if (missingDeps.length > 0) {
   warn(`if the plugin fails to load, run: npm install --prefix ${targetDir}`)
 }
 
-// 3. Patch the global tui.json so opencode loads the installed copy by absolute path
-let tuiPath = path.join(configDir, "tui.json")
-if (!existsSync(tuiPath) && existsSync(path.join(configDir, "tui.jsonc"))) {
-  tuiPath = path.join(configDir, "tui.jsonc")
-}
+// 3. Patch the global cli.json (OpenCode V2 terminal settings) so opencode
+//    loads the installed copy by absolute path. Also keep any legacy tui.json
+//    entry pointing at the same target, so a later tui.json -> cli.json
+//    migration cannot resurrect a stale path.
+let cliPath = path.join(configDir, "cli.json")
 
-let config
+let cliConfig
 try {
-  config = JSON.parse(readFileSync(tuiPath, "utf8").replace(/^\uFEFF/, ""))
+  cliConfig = JSON.parse(readFileSync(cliPath, "utf8").replace(/^\uFEFF/, ""))
 } catch {
-  warn(`could not parse ${tuiPath} (comments or invalid JSON) - add the plugin entry manually:`)
-  warn(`  "plugin": [ ${JSON.stringify(targetDir)} ]`)
-  process.exit(0)
+  cliConfig = {}
 }
 
 const isOurSpec = (value) => {
-  const spec = Array.isArray(value) ? value[0] : value
+  const spec = Array.isArray(value) ? value[0] : typeof value === "object" && value !== null ? value.package : value
   return typeof spec === "string" && spec.toLowerCase().includes("usage-bar")
 }
 
-const plugin = Array.isArray(config.plugin) ? config.plugin : []
-let replaced = false
-const next = plugin.map((item) => {
-  if (!isOurSpec(item) || replaced) return item
-  replaced = true
-  return Array.isArray(item) && item.length > 1 ? [targetDir, item[1]] : targetDir
-})
-if (!replaced) next.push(targetDir)
-config.plugin = next
+const replaceSpec = (item) => {
+  if (Array.isArray(item) && item.length > 1) {
+    // V1 tuple form [spec, options] -> V2 object form.
+    return { package: targetDir, options: item[1] }
+  }
+  return targetDir
+}
+
+const applyEntry = (config, key) => {
+  const list = Array.isArray(config[key]) ? config[key] : []
+  let replaced = false
+  const next = list.map((item) => {
+    if (!isOurSpec(item) || replaced) return item
+    replaced = true
+    return replaceSpec(item)
+  })
+  if (!replaced) next.push(targetDir)
+  config[key] = next
+  return replaced
+}
+
+const replaced = applyEntry(cliConfig, "plugins")
+if (!cliConfig.$schema) cliConfig.$schema = "https://opencode.ai/v2/cli.json"
 
 mkdirSync(configDir, { recursive: true })
-writeFileSync(tuiPath, JSON.stringify(config, null, 2) + EOL)
-log(`${replaced ? "updated" : "added"} entry in ${tuiPath}`)
+writeFileSync(cliPath, JSON.stringify(cliConfig, null, 2) + EOL)
+log(`${replaced ? "updated" : "added"} entry in ${cliPath}`)
+
+try {
+  let tuiPath = path.join(configDir, "tui.json")
+  if (!existsSync(tuiPath) && existsSync(path.join(configDir, "tui.jsonc"))) {
+    tuiPath = path.join(configDir, "tui.jsonc")
+  }
+  if (!existsSync(tuiPath)) throw new Error("no legacy tui.json")
+  const tuiConfig = JSON.parse(readFileSync(tuiPath, "utf8").replace(/^\uFEFF/, ""))
+  if (Array.isArray(tuiConfig.plugin) && tuiConfig.plugin.some(isOurSpec)) {
+    applyEntry(tuiConfig, "plugin")
+    writeFileSync(tuiPath, JSON.stringify(tuiConfig, null, 2) + EOL)
+    log(`updated legacy entry in ${tuiPath}`)
+  }
+} catch {
+  // No legacy tui.json (or unreadable) - nothing to migrate.
+}
+
 log("done - quit and restart opencode to load the plugin")

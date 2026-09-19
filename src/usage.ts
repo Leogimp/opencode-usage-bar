@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 
 export type GoWindow = {
   label: string
@@ -50,10 +50,6 @@ function toMs(value: unknown): number | null {
   return null
 }
 
-function statePath(): string {
-  return join(homedir(), ".config", "opencode", "usage-bar.json")
-}
-
 function normalizeWindow(label: string, raw: unknown): GoWindow | null {
   if (!raw || typeof raw !== "object") return null
   const percent = firstNumber(raw, ["percent", "usagePercent", "usage_percent", "usedPercent"])
@@ -77,28 +73,6 @@ export async function fetchGoUsage(apiKey: string): Promise<GoUsage> {
 }
 
 const CACHE_TTL_MS = 60_000
-
-export function loadHiddenPref(): boolean {
-  try {
-    const state = JSON.parse(readFileSync(statePath(), "utf8"))
-    return state?.hideSessionBar === true
-  } catch {
-    return false
-  }
-}
-
-export function saveHiddenPref(hidden: boolean): void {
-  try {
-    const path = statePath()
-    let state: Record<string, unknown> = {}
-    try {
-      state = JSON.parse(readFileSync(path, "utf8")) ?? {}
-    } catch {}
-    state.hideSessionBar = hidden
-    mkdirSync(dirname(path), { recursive: true })
-    writeFileSync(path, JSON.stringify(state, null, 2))
-  } catch {}
-}
 
 let cache: { at: number; data: GoUsage } | null = null
 let inFlight: Promise<GoUsage> | null = null
