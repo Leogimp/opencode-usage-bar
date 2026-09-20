@@ -23,6 +23,14 @@ if (!existsSync(path.join(distDir, "tui.tsx"))) {
 //    see https://github.com/anomalyco/opencode/issues/33884)
 mkdirSync(path.join(targetDir, "dist"), { recursive: true })
 cpSync(distDir, path.join(targetDir, "dist"), { recursive: true, dereference: true })
+// Local-path plugin targets are resolved by opencode as `<target>/tui` (extension
+// probed) - the package.json "./tui" exports mapping is NOT consulted for paths.
+// Mirror the entrypoint and its siblings at the target root so the resolution
+// finds `usage-bar/tui.tsx`. The entry's relative imports (./usage, ./bar,
+// ./dialog) resolve from the same flat location.
+for (const name of readdirSync(distDir)) {
+  if (/\.[cm]?[jt]sx?$/.test(name)) cpSync(path.join(distDir, name), path.join(targetDir, name), { dereference: true })
+}
 for (const name of ["package.json", "README.md", "LICENSE"]) {
   const src = path.join(pkgRoot, name)
   if (existsSync(src)) cpSync(src, path.join(targetDir, name))
