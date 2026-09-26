@@ -1,6 +1,6 @@
 {
   "name": "@leo.gimp/opencode-usage-bar",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "OpenCode Go subscription usage bars for the opencode v2 TUI - 5h/weekly/monthly windows, /limit popup",
   "type": "module",
   "main": "dist/tui.tsx",

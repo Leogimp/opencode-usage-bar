@@ -68,6 +68,8 @@ rolling 5h, weekly, and monthly - each with a bar, percent used, and reset timer
 - Fetches **fresh** data every time it opens (bypasses the 60s cache)
 - Reset timers keep ticking while the popup is open (30s tick)
 - Hosted dialog panel, centered over the session; close with `esc`
+- Footer shows the last four characters of the API key in use (`····xxxx`), so you can tell
+  which account is displayed when several are connected
 - `[ hide usage bar ]` toggle below the windows - hides or shows the session prompt bar,
   persisted across restarts in plugin storage (a pre-V2 `~/.config/opencode/usage-bar.json`
   preference is migrated automatically on first run)
@@ -109,7 +111,8 @@ Passed as the `options` object of the plugin entry in `cli.json`:
 
 ## Notes
 
-- Without an OpenCode Go key (`OPENCODE_GO_API_KEY` or `opencode-go` in the auth store) the plugin does not start - no bar, no command, nothing registered.
+- Without an OpenCode Go key the plugin shows no bar - only the `/limit` command stays registered as a no-op.
+- Key resolution (first match wins): `OPENCODE_GO_API_KEY` env → the **active** OpenCode Go credential in opencode's credential store (`~/.local/share/opencode/opencode.db`) → the legacy `opencode-go` entry in `~/.local/share/opencode/auth.json`. When several accounts are connected, the account actually in use is followed: switching accounts (`/connect`, credential activation) re-resolves the key via `credential.switched` events and refreshes usage immediately - no restart needed.
 - TUI plugins referenced by npm package spec fail to render (upstream issue [#33884](https://github.com/anomalyco/opencode/issues/33884)) - hence the file-path copy.
 
 ## Local development

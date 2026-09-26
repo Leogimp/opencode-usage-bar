@@ -16,9 +16,86 @@ export type GoUsage = {
 
 const USAGE_URL = "https://opencode.ai/zen/go/v1/usage"
 
-export async function findApiKey(): Promise<string | null> {
-  const env = process.env.OPENCODE_GO_API_KEY
-  if (typeof env === "string" && env.trim()) return env.trim()
+type SqliteHandle = {
+  query(sql: string, params: unknown[]): Record<string, unknown> | undefined
+  close(): void
+}
+
+type BunDatabase = {
+  prepare(sql: string): { get(...params: unknown[]): unknown }
+  close(): void
+}
+
+async function openDatabase(path: string): Promise<SqliteHandle | null> {
+  const dynImport = (name: string) => import(/* runtime-resolved */ name)
+  // Host is Bun-compiled (opencode binary): bun:sqlite is always available there.
+  if (globalThis.Bun) {
+    try {
+      const { Database } = (await dynImport("bun:sqlite")) as unknown as {
+        Database: new (path: string, options: { readonly: true }) => BunDatabase
+      }
+      const db = new Database(path, { readonly: true })
+      return {
+        query: (sql, params) => db.prepare(sql).get(...params) as Record<string, unknown> | undefined,
+        close: () => db.close(),
+      }
+    } catch {
+      // fall through to node:sqlite
+    }
+  }
+  try {
+    const { DatabaseSync } = (await dynImport("node:sqlite")) as unknown as {
+      DatabaseSync: new (path: string, options: { readOnly: true }) => BunDatabase
+    }
+    const db = new DatabaseSync(path, { readOnly: true })
+    return {
+      query: (sql, params) => db.prepare(sql).get(...params) as Record<string, unknown> | undefined,
+      close: () => db.close(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function opencodeDbPath(): string | null {
+  const dataHome = process.env.XDG_DATA_HOME?.trim() || null
+  const base = dataHome ? dataHome : join(homedir(), ".local", "share")
+  return join(base, "opencode", "opencode.db")
+}
+
+/**
+ * OpenCode V2 keeps provider credentials in its sqlite store with an `active`
+ * flag - when several accounts are connected for one integration (e.g. two
+ * OpenCode Go subscriptions), the ACTIVE credential's key is what every model
+ * request uses. `auth.json` is only mirrored for backwards compatibility and
+ * often retains the first key ever saved, so it must not decide "which account
+ * is in use" when a credential store is present.
+ */
+async function findActiveCredentialKey(): Promise<string | null> {
+  const dbPath = opencodeDbPath()
+  if (!dbPath || !existsSync(dbPath)) return null
+  const handle = await openDatabase(dbPath)
+  if (!handle) return null
+  try {
+    const row = handle.query(
+      "SELECT value FROM credential WHERE integration_id = ? AND active = 1 LIMIT 1",
+      ["opencode-go"],
+    )
+    const raw = row?.["value"]
+    if (typeof raw !== "string") return null
+    const parsed = JSON.parse(raw) as { type?: string; key?: string }
+    if (parsed?.type !== "key" || typeof parsed.key !== "string" || !parsed.key.trim()) return null
+    return parsed.key.trim()
+  } catch {
+    return null
+  } finally {
+    try {
+      handle.close()
+    } catch {}
+  }
+}
+
+function findAuthJsonKey(): string | null {
   try {
     const authPath = join(homedir(), ".local", "share", "opencode", "auth.json")
     if (!existsSync(authPath)) return null
@@ -29,6 +106,15 @@ export async function findApiKey(): Promise<string | null> {
     return null
   }
   return null
+}
+
+/** Resolution order: explicit env override > active credential store entry > legacy auth.json. */
+export async function findApiKey(): Promise<string | null> {
+  const env = process.env.OPENCODE_GO_API_KEY
+  if (typeof env === "string" && env.trim()) return env.trim()
+  const active = await findActiveCredentialKey()
+  if (active) return active
+  return findAuthJsonKey()
 }
 
 function firstNumber(value: unknown, keys: string[]): number | null {
@@ -74,19 +160,20 @@ export async function fetchGoUsage(apiKey: string): Promise<GoUsage> {
 
 const CACHE_TTL_MS = 60_000
 
-let cache: { at: number; data: GoUsage } | null = null
-let inFlight: Promise<GoUsage> | null = null
+let cache: { key: string; at: number; data: GoUsage } | null = null
+let inFlight: { key: string; promise: Promise<GoUsage> } | null = null
 
 export async function getUsage(apiKey: string, force = false): Promise<GoUsage> {
-  if (!force && cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.data
-  if (inFlight) return inFlight
-  inFlight = fetchGoUsage(apiKey)
+  if (!force && cache && cache.key === apiKey && Date.now() - cache.at < CACHE_TTL_MS) return cache.data
+  if (!force && inFlight && inFlight.key === apiKey) return inFlight.promise
+  const promise = fetchGoUsage(apiKey)
     .then((data) => {
-      cache = { at: Date.now(), data }
+      cache = { key: apiKey, at: Date.now(), data }
       return data
     })
     .finally(() => {
-      inFlight = null
+      if (inFlight?.key === apiKey) inFlight = null
     })
-  return inFlight
+  inFlight = { key: apiKey, promise }
+  return promise
 }

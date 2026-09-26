@@ -10,6 +10,7 @@ const TICK_MS = 30_000
 
 export function UsagePanel(props: {
   apiKey: string
+  keyHint: string
   hidden: () => boolean
   onToggle: () => void
 }) {
@@ -83,7 +84,7 @@ export function UsagePanel(props: {
         <text fg={theme.text.muted}>{`[ ${props.hidden() ? "show" : "hide"} usage bar ]`}</text>
       </box>
       <box paddingTop={1}>
-        <text fg={theme.text.muted}>esc close · refreshes every 60s</text>
+        <text fg={theme.text.muted}>esc close · active key ····{props.keyHint} · refreshes every 60s</text>
       </box>
     </box>
   )

@@ -72,24 +72,24 @@ function migrateLegacyPref(update: (mutation: (draft: { hideSessionBar: boolean 
 export default Plugin.define({
   id: "opencode-usage-bar",
   async setup(ctx: Context) {
-    const apiKey = await findApiKey()
-    if (!apiKey) return
-
     const opts = (ctx.options ?? {}) as Options
     const [settings, updateSettings] = ctx.storage.store("settings", {
       initial: { hideSessionBar: false },
     })
     migrateLegacyPref(updateSettings)
 
+    // Mutable: re-resolved when the account in use switches (see credential events below).
+    let apiKey = await findApiKey()
+
     const [usage, setUsage] = createSignal<GoUsage | null>(null)
     const [failed, setFailed] = createSignal(false)
     let polling = false
 
-    async function poll(): Promise<void> {
-      if (polling) return
+    async function poll(force = false): Promise<void> {
+      if (polling || !apiKey) return
       polling = true
       try {
-        const data = await getUsage(apiKey!)
+        const data = await getUsage(apiKey, force)
         setUsage(data)
         setFailed(false)
       } catch {
@@ -99,15 +99,34 @@ export default Plugin.define({
       }
     }
 
-    const timer = setInterval(poll, POLL_MS)
+    const timer = setInterval(() => void poll(), POLL_MS)
     void poll()
 
+    // Follow the account that is actually in use: OpenCode V2 keeps multiple
+    // credentials per provider and marks one active. switched = account change,
+    // updated = credential added/removed - both may change the resolved key.
+    function resolveKeyOnCredentialChange() {
+      void findApiKey().then((next) => {
+        if (next && next !== apiKey) {
+          apiKey = next
+          void poll(true)
+        }
+      })
+    }
+    const offSwitched = ctx.data.on("credential.switched", (event) => {
+      if (!apiKey) resolveKeyOnCredentialChange()
+      else if (event?.data?.integrationID === "opencode-go") resolveKeyOnCredentialChange()
+    })
+    const offUpdated = ctx.data.on("credential.updated", resolveKeyOnCredentialChange)
+
     function openLimits() {
+      if (!apiKey) return
       ctx.ui.dialog.set({ size: "large", centered: true })
       ctx.ui.dialog.show(
         () => (
           <UsagePanel
             apiKey={apiKey!}
+            keyHint={apiKey!.slice(-4)}
             hidden={() => settings.hideSessionBar}
             onToggle={() => {
               void updateSettings((draft) => {
@@ -158,6 +177,10 @@ export default Plugin.define({
       },
     })
 
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+      offSwitched()
+      offUpdated()
+    }
   },
 })
