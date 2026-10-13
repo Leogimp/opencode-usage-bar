@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./src/tui.tsx",
   "exports": {
+    ".": "./src/tui.tsx",
     "./tui": "./src/tui.tsx"
   },
   "files": [
@@ -13,12 +14,8 @@
     "README.md",
     "LICENSE"
   ],
-  "bin": {
-    "opencode-usage-bar": "scripts/install.mjs"
-  },
   "scripts": {
-    "install-plugin": "node scripts/install.mjs",
-    "postinstall": "node scripts/install.mjs"
+    "install-plugin": "node scripts/install.mjs"
   },
   "dependencies": {
     "@opencode/plugin": "^2.0.10",
