@@ -28,14 +28,31 @@
 ## Install
 
 ```sh
-npm install -g @leo.gimp/opencode-usage-bar
+opencode plugin add @leo.gimp/opencode-usage-bar
 ```
 
-Then quit and restart opencode - CLI plugin config is only read at startup. The postinstall script copies the plugin to `~/.config/opencode/usage-bar/`, vendors its dependencies, and patches `~/.config/opencode/cli.json` (the V2 terminal settings file) with the absolute path under `plugins`.
+That installs the package and adds it to `~/.config/opencode/cli.json` (the V2 terminal settings file). Quit and restart opencode afterwards - CLI plugin config is read at startup.
 
-> npm 11+ gates install scripts by default. If the postinstall was skipped, re-run with `npm install -g @leo.gimp/opencode-usage-bar --allow-scripts=@leo.gimp/opencode-usage-bar`, or run the `opencode-usage-bar` bin manually.
+Requires opencode **v2**. For opencode 1.x, use the [`OpenCode-v1` branch](https://github.com/Leogimp/opencode-usage-bar/tree/OpenCode-v1).
 
-To uninstall, remove the entry from `cli.json` and delete `~/.config/opencode/usage-bar/`.
+To uninstall:
+
+```sh
+opencode plugin remove @leo.gimp/opencode-usage-bar
+```
+
+### Installing from a local checkout
+
+If you prefer running straight from a clone, `npm run install-plugin` copies the sources to `~/.config/opencode/usage-bar/` and adds that path to `cli.json`:
+
+```sh
+npm install
+npm run install-plugin
+```
+
+This is an explicit opt-in step, never an automatic one. Useful flags: `--dry-run` to preview every change, `--no-config` to copy the files without touching `cli.json`, `--config-dir DIR` to target a different opencode config directory. Any config file it changes is backed up alongside as `<file>.opencode-usage-bar.bak`, and it refuses to rewrite a config it cannot parse.
+
+The renderer libraries (`solid-js`, `@opentui/core`, `@opentui/solid`) are peer dependencies supplied by the opencode host, so neither install path copies them. A second copy would break rendering: OpenTUI's reconciler keys off module identity, so JSX compiled against a different copy than the one rendering it produces nothing at all.
 
 ## Features
 
@@ -100,9 +117,10 @@ Passed as the `options` object of the plugin entry in `cli.json`:
 
 ```json
 {
+  "$schema": "https://opencode.ai/v2/cli.json",
   "plugins": [
     {
-      "package": "C:\\path\\to\\opencode-usage-bar",
+      "package": "@leo.gimp/opencode-usage-bar",
       "options": { "left_reserve": 60 }
     }
   ]
@@ -113,11 +131,11 @@ Passed as the `options` object of the plugin entry in `cli.json`:
 
 - Without an OpenCode Go key the plugin shows no bar - only the `/limit` command stays registered as a no-op.
 - Key resolution (first match wins): `OPENCODE_GO_API_KEY` env → the **active** OpenCode Go credential in opencode's credential store (`~/.local/share/opencode/opencode.db`) → the legacy `opencode-go` entry in `~/.local/share/opencode/auth.json`. When several accounts are connected, the account actually in use is followed: switching accounts (`/connect`, credential activation) re-resolves the key via `credential.switched` events and refreshes usage immediately - no restart needed.
-- TUI plugins referenced by npm package spec fail to render (upstream issue [#33884](https://github.com/anomalyco/opencode/issues/33884)) - hence the file-path copy.
+- The package ships its TypeScript sources unbuilt, which is the documented shape for an opencode CLI plugin: the Bun host transpiles them on load. There is no `dist/` and no build step.
 
 ## Local development
 
-Add the absolute path to the plugin folder under `plugins` in `~/.config/opencode/cli.json`:
+There is no build step - edit `src/` and restart opencode. To run from a checkout, point opencode at it directly in `~/.config/opencode/cli.json`:
 
 ```json
 {
@@ -126,9 +144,11 @@ Add the absolute path to the plugin folder under `plugins` in `~/.config/opencod
 }
 ```
 
+The host transpiles the TypeScript on load, so a reload picks up source edits without any build step in between.
+
 ## Requirements
 
-- opencode **v2** (uses the V2 CLI plugin slot API, `@opencode/plugin/tui`)
+- opencode **v2** (uses the V2 CLI plugin slot API, `@opencode/plugin/tui`). Not compatible with opencode 1.x.
 - An OpenCode Go subscription
 
 ## License
