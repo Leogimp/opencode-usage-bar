@@ -99,88 +99,107 @@ export default Plugin.define({
       }
     }
 
-    const timer = setInterval(() => void poll(), POLL_MS)
-    void poll()
-
-    // Follow the account that is actually in use: OpenCode V2 keeps multiple
-    // credentials per provider and marks one active. switched = account change,
-    // updated = credential added/removed - both may change the resolved key.
-    function resolveKeyOnCredentialChange() {
-      void findApiKey().then((next) => {
-        if (next && next !== apiKey) {
-          apiKey = next
-          void poll(true)
-        }
-      })
+    // Everything registered from here on outlives setup, so it is tracked in
+    // `disposers`. If any registration below throws, the catch unwinds all of
+    // them: without this, a failed setup leaves a 60s poll timer running
+    // forever against a plugin that never finished loading, and the plugin
+    // reloads (which is exactly when this happens) multiply the leak.
+    const disposers: Array<() => void> = []
+    const dispose = () => {
+      while (disposers.length > 0) {
+        const off = disposers.pop()!
+        try {
+          off()
+        } catch {}
+      }
     }
-    const offSwitched = ctx.data.on("credential.switched", (event) => {
-      if (!apiKey) resolveKeyOnCredentialChange()
-      else if (event?.data?.integrationID === "opencode-go") resolveKeyOnCredentialChange()
-    })
-    const offUpdated = ctx.data.on("credential.updated", resolveKeyOnCredentialChange)
 
-    function openLimits() {
-      if (!apiKey) return
-      ctx.ui.dialog.set({ size: "large", centered: true })
-      ctx.ui.dialog.show(
-        () => (
-          <UsagePanel
-            apiKey={apiKey!}
-            keyHint={apiKey!.slice(-4)}
-            hidden={() => settings.hideSessionBar}
-            onToggle={() => {
-              void updateSettings((draft) => {
-                draft.hideSessionBar = !draft.hideSessionBar
-              })
-            }}
-          />
-        ),
+    try {
+      const timer = setInterval(() => void poll(), POLL_MS)
+      disposers.push(() => clearInterval(timer))
+      void poll()
+
+      // Follow the account that is actually in use: OpenCode V2 keeps multiple
+      // credentials per provider and marks one active. switched = account change,
+      // updated = credential added/removed - both may change the resolved key.
+      function resolveKeyOnCredentialChange() {
+        void findApiKey().then((next) => {
+          if (next && next !== apiKey) {
+            apiKey = next
+            void poll(true)
+          }
+        })
+      }
+      disposers.push(
+        ctx.data.on("credential.switched", (event) => {
+          if (!apiKey) resolveKeyOnCredentialChange()
+          else if (event?.data?.integrationID === "opencode-go") resolveKeyOnCredentialChange()
+        }),
       )
+      disposers.push(ctx.data.on("credential.updated", resolveKeyOnCredentialChange))
+
+      function openLimits() {
+        if (!apiKey) return
+        ctx.ui.dialog.set({ size: "large", centered: true })
+        ctx.ui.dialog.show(
+          () => (
+            <UsagePanel
+              apiKey={apiKey!}
+              keyHint={apiKey!.slice(-4)}
+              hidden={() => settings.hideSessionBar}
+              onToggle={() => {
+                void updateSettings((draft) => {
+                  draft.hideSessionBar = !draft.hideSessionBar
+                })
+              }}
+            />
+          ),
+        )
+      }
+
+      // Session prompt footer: the usage bar next to the prompt hints.
+      ctx.ui.slot({
+        append: "prompt.footer.status",
+        render: (input: SlotMap["prompt.footer.status"]) => (
+          <Show when={input.sessionID}>
+            <Sidebar
+              opts={opts}
+              hidden={() => settings.hideSessionBar}
+              usage={usage}
+              failed={failed}
+            />
+          </Show>
+        ),
+      })
+
+      // Global command layer for the /limit popup. Mounted through the app slot
+      // so the layer is owned by a long-lived component.
+      ctx.ui.slot({
+        append: "app",
+        render: () => {
+          ctx.keymap.layer(() => ({
+            mode: "global",
+            priority: 100,
+            commands: [
+              {
+                id: "usage-bar.usage",
+                title: "Usage limits",
+                description: "OpenCode Go - 5h / weekly / monthly usage",
+                group: "Usage",
+                palette: true,
+                slash: { name: "limit" },
+                run: openLimits,
+              },
+            ],
+          }))
+          return null
+        },
+      })
+    } catch (error) {
+      dispose()
+      throw error
     }
 
-    // Session prompt footer: the usage bar next to the prompt hints.
-    ctx.ui.slot({
-      append: "prompt.footer.status",
-      render: (input: SlotMap["prompt.footer.status"]) => (
-        <Show when={input.sessionID}>
-          <Sidebar
-            opts={opts}
-            hidden={() => settings.hideSessionBar}
-            usage={usage}
-            failed={failed}
-          />
-        </Show>
-      ),
-    })
-
-    // Global command layer for the /limit popup. Mounted through the app slot
-    // so the layer is owned by a long-lived component.
-    ctx.ui.slot({
-      append: "app",
-      render: () => {
-        ctx.keymap.layer(() => ({
-          mode: "global",
-          priority: 100,
-          commands: [
-            {
-              id: "usage-bar.usage",
-              title: "Usage limits",
-              description: "OpenCode Go - 5h / weekly / monthly usage",
-              group: "Usage",
-              palette: true,
-              slash: { name: "limit" },
-              run: openLimits,
-            },
-          ],
-        }))
-        return null
-      },
-    })
-
-    return () => {
-      clearInterval(timer)
-      offSwitched()
-      offUpdated()
-    }
+    return dispose
   },
 })

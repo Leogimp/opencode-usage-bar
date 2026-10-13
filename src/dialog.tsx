@@ -28,6 +28,9 @@ export function UsagePanel(props: {
     priority: 1,
     commands: [
       {
+        id: "usage-bar.close",
+        title: "Close usage limits",
+        group: "Usage",
         bind: "escape",
         run: () => {
           ctx.ui.dialog.clear()
