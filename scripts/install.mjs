@@ -5,7 +5,7 @@
  * This is NOT an install lifecycle hook. It only ever runs when a human types
  * `npm run install-plugin`. The primary install path is:
  *
- *     opencode plugin add @leo.gimp/opencode-usage-bar
+ *     opencode plugin add "@leo.gimp/opencode-usage-bar"
  *
  * which needs no script at all. This exists for the local-path case, where
  * opencode loads the plugin from a directory instead of from a package spec.
@@ -44,7 +44,7 @@ if (flag("--help") || flag("-h")) {
       "  --target DIR       install directory (default: <config-dir>/usage-bar)",
       "  --no-config        copy plugin files only, do not touch any config",
       "",
-      "Primary install path is: opencode plugin add @leo.gimp/opencode-usage-bar",
+      "Primary install path is: opencode plugin add \"@leo.gimp/opencode-usage-bar\"",
     ].join("\n"),
   )
   process.exit(0)

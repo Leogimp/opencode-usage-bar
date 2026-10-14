@@ -28,7 +28,7 @@
 ## Install
 
 ```sh
-opencode plugin add @leo.gimp/opencode-usage-bar
+opencode plugin add "@leo.gimp/opencode-usage-bar"
 ```
 
 That installs the package and adds it to `~/.config/opencode/cli.json` (the V2 terminal settings file). Quit and restart opencode afterwards - CLI plugin config is read at startup.
@@ -38,7 +38,7 @@ Requires opencode **v2**. For opencode 1.x, use the [`OpenCode-v1` branch](https
 To uninstall:
 
 ```sh
-opencode plugin remove @leo.gimp/opencode-usage-bar
+opencode plugin remove "@leo.gimp/opencode-usage-bar"
 ```
 
 ### Installing from a local checkout
